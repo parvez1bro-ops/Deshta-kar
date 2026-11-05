@@ -1,6 +1,6 @@
 {
   "name": "deshta-kar",
-  "version": "0.6.0",
+  "version": "0.10.0",
   "description": "DESHTA KAR (দেশটা কার) - Bangladesh-inspired open world life simulation. Foundation prototype.",
   "private": true,
   "type": "module",
