@@ -25,7 +25,7 @@ export const QUALITY_PRESETS = {
     skyline: false,       // distant silhouette buildings
     fogNear: 45,
     fogFar: 130,
-    npc: { min: 4, start: 6, max: 8, cull: 42 },        // pedestrians: adaptive between min and max, drawn / animated within `cull` metres
+    npc: { min: 6, start: 10, max: 14, cull: 46 },       // pedestrians: adaptive between min and max, drawn / animated within `cull` metres
   },
   medium: {
     label: 'Medium',
@@ -36,7 +36,7 @@ export const QUALITY_PRESETS = {
     skyline: true,
     fogNear: 80,
     fogFar: 200,
-    npc: { min: 8, start: 12, max: 16, cull: 62 },
+    npc: { min: 12, start: 18, max: 24, cull: 68 },
   },
 };
 export const QUALITY_ORDER = ['low', 'medium'];
