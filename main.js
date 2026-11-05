@@ -21,6 +21,8 @@ import { Interactions } from './interaction.js';
 import { Motorcycle } from './vehicle.js';
 import { NpcManager } from './npc.js';
 import { DialogueUI } from './dialogue.js';
+import { NpcChatUI } from './npcChatUI.js';
+import { Mailbox } from './mailbox.js';
 import { GAME_VERSION } from './info.js';
 
 const canvas = document.getElementById('game');
@@ -50,6 +52,7 @@ const tpc = new ThirdPersonCamera(camera, world, {
   minDistance: CAMERA_LIMITS.distance.min,
   maxDistance: CAMERA_LIMITS.distance.max,
 });
+world.camera = tpc;   // UPDATE 07: enterables report indoor state so the camera adapts
 
 /** Push the saved camera settings into the gameplay camera. */
 function applyCameraSettings() {
@@ -87,6 +90,10 @@ const lobby = new Lobby({
   profile, modal, outfit: DEFAULT_OUTFIT, onPlay: requestPlay,
   onOpenProfile: (opts) => profileScreen.open(opts),
 });
+// UPDATE 10: offline mailbox (Updates / Gifts / Messages), stored on this device
+const mailbox = new Mailbox({ modal, profile, toast: (m) => lobby.toast(m) });
+const mailboxBtn = document.querySelector('#lobby [data-panel="mailbox"]');
+if (mailboxBtn) mailboxBtn.addEventListener('click', () => mailbox.open(), { capture: true });
 profileScreen = new ProfileScreen({
   profile, outfit: DEFAULT_OUTFIT,
   onChange: (p) => lobby.setProfile(p),
@@ -123,7 +130,7 @@ const interactions = new Interactions(world.interactables, {
 });
 const interactCtx = {
   player,
-  talk: (npc) => dialogue.open(npc),
+  talk: (npc) => chat.open(npc),
   mount: () => bike.mount(player),
   dismount: () => bike.dismount(),
 };
@@ -180,6 +187,26 @@ const dialogue = new DialogueUI({
     if (!state.is(STATES.PLAYING)) return;
     if (touchMode) return;
     if (reason === 'esc') enterPaused();      // Esc is not a click: the browser would refuse to re-capture the mouse
+    else controls.requestLock();
+  },
+});
+
+// UPDATE 09: smart chat replaces the scripted dialogue for NPC interaction.
+// The old DialogueUI stays available (dialogue.js) but chat is the live path.
+const chat = new NpcChatUI({
+  npcs, root: document.getElementById('gameRoot'), getFocus: () => player.position,
+  onOpen: () => {
+    mobile.releaseAll();
+    controls.releaseMovement();
+    controls.consumeInteract();
+    if (!touchMode && document.pointerLockElement) document.exitPointerLock();
+  },
+  onClose: (reason) => {
+    controls.releaseMovement();
+    controls.consumeInteract();
+    if (!state.is(STATES.PLAYING)) return;
+    if (touchMode) return;
+    if (reason === 'esc') enterPaused();
     else controls.requestLock();
   },
 });
@@ -334,6 +361,7 @@ function finishTransition() {
 
 function enterPaused() {
   if (dialogue.isOpen) dialogue.close('pause');
+  if (chat.isOpen) chat.close('pause');
   state.set(STATES.PAUSED);
   stopLoop();
   mobile.releaseAll();                      // no stuck joystick / run toggle while the menu is open
@@ -356,6 +384,7 @@ function resumePlaying() {
 /** Show the lobby (first start, "Back to Lobby", or a failed Play). */
 function enterLobby() {
   if (dialogue.isOpen) dialogue.close('lobby');
+  if (chat.isOpen) chat.close('lobby');
   modal.close();
   profileScreen.close();
   pauseMsg.textContent = '';
@@ -480,7 +509,7 @@ function updatePlaying(dt) {
     player.update(dt, controls, tpc.yaw);
     lookIdle = 0;
   }
-  const talking = dialogue.isOpen;
+  const talking = dialogue.isOpen || chat.isOpen;
   if (talking) controls.consumeWave();
   if (controls.consumeWave() && !riding) player.wave();      // H key / Hand Gesture button
   tpc.update(dt, controls, player.position, riding ? bike.speed > 12 : player.isRunning);
@@ -531,4 +560,4 @@ enterLobby();
 applyOrientation();
 
 // handy for console debugging during development only
-if (import.meta.env?.DEV) window.__deshta = { dialogue, settings, state, player, world, tpc, lobbyScene, renderer, controls, bike, npcs, profile };
+if (import.meta.env?.DEV) window.__deshta = { dialogue, chat, mailbox, settings, state, player, world, tpc, lobbyScene, renderer, controls, bike, npcs, profile };
