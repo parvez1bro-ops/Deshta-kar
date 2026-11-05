@@ -59,6 +59,7 @@ export class World {
     this.interactables = [];   // doors, balcony, (the motorcycle adds its own)
     this.enterables = null;
     this.ramps = [];
+    this.camera = null;        // set by main.js: lets enterables report indoor state to the camera
 
     this._createSky();
     this._createLights(shadowMapSize);
@@ -243,6 +244,7 @@ export class World {
     B.buildBench(ctx, 50, -6, 0);
 
     // ---- enterable buildings (no random numbers used, so the rest of the city is unchanged) ----
+    ctx.camera = this.camera;
     this.enterables = buildEnterables(ctx);
     this.scene.add(this.enterables.group);
     this.interactables.push(...this.enterables.interactables);
