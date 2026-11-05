@@ -48,7 +48,7 @@ export const PANELS = {
       <span class="badge">Items coming soon</span>`,
   },
 
-  mailbox: { title: 'Mailbox', html: soon('Official messages, notifications and gifts will arrive here.', ['Inbox for rewards and announcements']) },
+  mailbox: { title: 'Mailbox', html: '' },
   friends: { title: 'Friends', html: soon('People you play with.', ['Friend list and invitations', 'See who is online']) },
   addfriend: { title: 'Add Friend', html: soon('Add a friend with their UID.', ['Search by 8-digit UID', 'Friend requests']) },
   wallet: {
