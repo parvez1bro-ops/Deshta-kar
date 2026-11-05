@@ -5,6 +5,9 @@ const MIN_PITCH = -0.25;
 const MAX_PITCH = 1.35;
 const MIN_CLEARANCE_DIST = 1.4;           // closest the camera may be pulled to the player
 const LIFT_STEPS = [0.25, 0.5, 0.8, 1.1]; // extra pitch tried when a wall is behind the player
+const INDOOR_MIN_DIST = 1.2;              // indoor camera may come even closer
+const INDOOR_MAX_DIST = 3.2;              // indoor camera never pulls far back
+const INDOOR_PITCH_MAX = 0.55;            // indoor camera stays low, never climbs over the roof
 
 /**
  * Third-person orbit camera.
@@ -41,6 +44,8 @@ export class ThirdPersonCamera {
     this.lookSmoothing = false;          // touch: spread each finger step over a few frames
     this._pdx = 0;
     this._pdy = 0;
+    this.indoor = false;                 // true while the player is inside an enterable house
+    this._indoorBlend = 0;               // 0 = outdoor, 1 = indoor (smoothed)
   }
 
   /**
@@ -91,12 +96,13 @@ export class ThirdPersonCamera {
   }
 
   /** Free distance along the camera ray for a pitch (before smoothing). */
-  _freeDistance(pitch) {
+  _freeDistance(pitch, maxDist = this.desiredDistance) {
     this._setDir(pitch);
-    this._end.copy(this.pivot).addScaledVector(this._dir, this.desiredDistance);
+    this._end.copy(this.pivot).addScaledVector(this._dir, maxDist);
     const t = this.world.raycastBlockers(this.pivot, this._end);
-    if (t >= 1) return this.desiredDistance;
-    return clamp(t * this.desiredDistance - 0.25, MIN_CLEARANCE_DIST, this.desiredDistance);
+    if (t >= 1) return maxDist;
+    const minD = this.indoor ? INDOOR_MIN_DIST : MIN_CLEARANCE_DIST;
+    return clamp(t * maxDist - 0.25, minD, maxDist);
   }
 
   update(dt, controls, target, running) {
@@ -122,21 +128,29 @@ export class ThirdPersonCamera {
     this.pivot.z = damp(this.pivot.z, target.z, 14, dt);
     this.pivot.y = damp(this.pivot.y, target.y + this.pivotHeight, 9, dt);
 
+    // indoor mode: blend toward a close, low camera so the player never sees through walls
+    // and the camera never climbs above the roof. Outdoor behaviour is unchanged.
+    this._indoorBlend = damp(this._indoorBlend, this.indoor ? 1 : 0, 6, dt);
+    const indoorK = this._indoorBlend;
+    const maxDist = this.desiredDistance * (1 - indoorK) + Math.min(this.desiredDistance, INDOOR_MAX_DIST) * indoorK;
+    const pitchCap = MAX_PITCH * (1 - indoorK) + INDOOR_PITCH_MAX * indoorK;
+
     // look for a clear view; if a wall is behind the player, try looking down from higher up
-    let free = this._freeDistance(this.pitch);
+    // (indoors the lift is capped so the camera stays inside the room)
+    let free = this._freeDistance(this.pitch, maxDist);
     let wantedLift = 0;
-    if (free < this.desiredDistance * 0.75) {
+    if (free < maxDist * 0.75) {
       for (let i = 0; i < LIFT_STEPS.length; i++) {
-        const p = Math.min(this.pitch + LIFT_STEPS[i], MAX_PITCH);
-        const f = this._freeDistance(p);
+        const p = Math.min(this.pitch + LIFT_STEPS[i], pitchCap);
+        const f = this._freeDistance(p, maxDist);
         if (f > free) { free = f; wantedLift = p - this.pitch; }
-        if (f >= this.desiredDistance * 0.75) break;
+        if (f >= maxDist * 0.75) break;
       }
     }
     this.lift = damp(this.lift, wantedLift, wantedLift > this.lift ? 9 : 3, dt);
 
-    const pitch = Math.min(this.pitch + this.lift, MAX_PITCH);
-    const allowed = this._freeDistance(pitch);
+    const pitch = Math.min(this.pitch + this.lift, pitchCap);
+    const allowed = this._freeDistance(pitch, maxDist);
     // shrink at once (never see through a wall), grow back smoothly
     if (allowed < this.currentDistance) this.currentDistance = allowed;
     else this.currentDistance = damp(this.currentDistance, allowed, 4, dt);
