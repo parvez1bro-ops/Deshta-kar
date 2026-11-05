@@ -155,7 +155,7 @@ export class NpcManager {
     scene.add(this.group);
 
     this.preset = null;
-    this.pop = new PopulationController({ min: 4, start: 6, max: 8 });
+    this.pop = new PopulationController({ min: 6, start: 10, max: 14 });
     this.cull = 50;
     this.pressure = 0;
     this._frame = 0;
@@ -312,6 +312,7 @@ export class NpcManager {
       short: 'TALK',
       scorePenalty: 0.12,                                     // doors and the motorcycle win a tie
       radius: home ? TALK_RANGE_STALL : TALK_RANGE,
+      shortLabel: () => 'TALK',
       get x() { return n.obj.position.x; },
       get z() { return n.obj.position.z; },
       label: () => `Talk — ${n.name}`,
