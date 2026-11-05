@@ -1,0 +1,21 @@
+{
+  "models": [
+    {
+      "id": "man_01",
+      "file": "man_01.glb",
+      "gender": "male",
+      "height": 1.72,
+      "clips": { "idle": "Idle", "walk": "Walk", "run": "Run", "talk": "Talking" },
+      "walkSpeed": 1.4,
+      "runSpeed": 3.6,
+      "materials": { "skin": "skin|body", "hair": "hair", "top": "shirt|top", "bottom": "pants|trouser" },
+      "tint": "multiply"
+    },
+    {
+      "id": "woman_01",
+      "file": "woman_01.glb",
+      "gender": "female",
+      "height": 1.62
+    }
+  ]
+}

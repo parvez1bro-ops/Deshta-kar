@@ -1,0 +1,42 @@
+/* Touch HUD. Only exists in the DOM flow while body.touch + state "playing"; hidden everywhere else. */
+.touch-hud { display: none; position: fixed; inset: 0; z-index: 6; pointer-events: none; touch-action: none;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+body.touch[data-state="playing"] .touch-hud { display: block; }
+body.touch[data-state="playing"], body.touch[data-state="playing"] #game { touch-action: none; overscroll-behavior: none; }
+
+.tz { position: absolute; top: 0; bottom: 0; pointer-events: auto; touch-action: none; }
+.tz-move { left: 0; width: 46%; }
+.tz-look { right: 0; width: 54%; }
+/* the look area sits under the buttons (they are later in the DOM), so a thumb on a button never rotates the camera */
+
+/* floating joystick: idles at the bottom-left, jumps to where the thumb lands */
+.joy { position: absolute; width: var(--joy); height: var(--joy); margin: calc(var(--joy) / -2) 0 0 calc(var(--joy) / -2); pointer-events: none; opacity: 0.55; transition: opacity 0.15s ease; }
+.joy.active { opacity: 0.95; }
+.joy-base { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.55); background: radial-gradient(circle, rgba(255, 255, 255, 0.1), rgba(10, 30, 24, 0.35)); box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.18); }
+.joy-knob { position: absolute; left: 50%; top: 50%; width: 42%; height: 42%; margin: -21% 0 0 -21%; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #bfe9d6 60%, #2fb386); border: 2px solid rgba(255, 255, 255, 0.8); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4); will-change: transform; }
+
+.tbtn { position: absolute; pointer-events: auto; touch-action: none; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1px;
+  width: var(--btn); height: var(--btn); border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.55); background: rgba(10, 30, 24, 0.55); color: #fff;
+  font: 700 clamp(9px, 1.9vh, 12px) var(--font); letter-spacing: 0.5px; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); padding: 0; }
+.tbtn .svg { width: 46%; height: 46%; }
+.tbtn.down { transform: scale(0.9); background: rgba(47, 179, 134, 0.7); }
+.tbtn.on { background: rgba(244, 185, 66, 0.9); color: #2a1a05; border-color: #fff; animation: autoRunPulse 1.1s ease-in-out infinite; }
+@keyframes autoRunPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(244, 185, 66, 0.6), 0 4px 14px rgba(0, 0, 0, 0.35); } 50% { box-shadow: 0 0 0 9px rgba(244, 185, 66, 0), 0 4px 14px rgba(0, 0, 0, 0.35); } }
+.tbtn.hidden { display: none !important; }
+.tb-jump { right: calc(18px + env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom)); width: calc(var(--btn) * 1.2); height: calc(var(--btn) * 1.2); background: rgba(230, 57, 70, 0.6); }
+.tb-run { right: calc(30px + var(--btn) * 1.2 + env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom)); }
+.tb-act { right: calc(26px + env(safe-area-inset-right)); bottom: calc(30px + var(--btn) * 1.2 + env(safe-area-inset-bottom)); border-color: var(--gold); background: rgba(244, 185, 66, 0.55); }
+.tb-veh { right: calc(26px + env(safe-area-inset-right)); bottom: calc(30px + var(--btn) * 1.2 + env(safe-area-inset-bottom)); border-color: var(--gold); background: rgba(244, 185, 66, 0.55); }
+.tb-wave { right: calc(36px + var(--btn) + env(safe-area-inset-right)); bottom: calc(30px + var(--btn) * 1.2 + env(safe-area-inset-bottom)); width: calc(var(--btn) * 0.88); height: calc(var(--btn) * 0.88); }
+.safe-probe { position: absolute; left: 0; top: 0; width: 0; height: 0; visibility: hidden; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+.t-full { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: calc(58px + env(safe-area-inset-left)); width: 40px; height: 40px; border-radius: 12px; pointer-events: auto; touch-action: none; padding: 9px;
+  background: rgba(10, 30, 24, 0.6); border: 1px solid rgba(255, 255, 255, 0.4); color: #fff; }
+.t-full[hidden] { display: none; }
+.t-full .svg { width: 100%; height: 100%; }
+.t-pause { position: absolute; top: calc(10px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left)); width: 40px; height: 40px; border-radius: 12px; pointer-events: auto; touch-action: none; padding: 8px;
+  background: rgba(10, 30, 24, 0.6); border: 1px solid rgba(255, 255, 255, 0.4); color: #fff; }
+.t-pause .svg { width: 100%; height: 100%; }
+body.touch #hint { display: none !important; }
+body.touch[data-state="playing"] #hud { top: 10px; right: 10px; min-width: 0; padding: 4px 10px; transform: scale(0.85); transform-origin: top right; }
+body.touch[data-state="playing"] #hud .row2 { display: none; }
+body.touch[data-state="playing"] .prompt { bottom: auto; top: 14px; }

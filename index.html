@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#0b3d2e" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>DESHTA KAR — দেশটা কার</title>
+  <link rel="stylesheet" href="/src/lobby.css" />
+  <style>
+    :root {
+      --green: #0f6b4f;
+      --green-light: #2fb386;
+      --red: #e63946;
+      --gold: #f4b942;
+      --cream: #f6efe0;
+      --ink: #0a1512;
+      --panel: rgba(10, 22, 18, 0.9);
+      --glass: rgba(10, 24, 19, 0.58);
+      --line: rgba(255, 255, 255, 0.14);
+      --text: #eaf3ef;
+      --muted: #9db8ae;
+      --font: "Segoe UI", "Noto Sans Bengali", "Nirmala UI", system-ui, -apple-system, Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #cfe6f2; font-family: var(--font); color: var(--text); overscroll-behavior: none; }
+    #gameRoot { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; }
+    #gameRoot:fullscreen { width: 100vw; height: 100vh; height: 100dvh; background: #000; }
+    #gameRoot:-webkit-full-screen { width: 100vw; height: 100vh; background: #000; }
+    #game { position: fixed; inset: 0; display: block; width: 100vw; height: 100vh; height: 100dvh; z-index: 0; touch-action: none; }
+    /* no text selection, long-press menu, tap flash or double-tap zoom anywhere (typing fields excepted) */
+    html, body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    input, textarea { -webkit-user-select: text; user-select: text; }
+    img, svg { -webkit-user-drag: none; }
+
+    /* ---- performance panel: only while playing / paused ---- */
+    #hud { display: none; position: fixed; top: 10px; right: 12px; z-index: 5; min-width: 150px; padding: 8px 12px 8px 14px; background: var(--panel);
+           border-radius: 8px; border-left: 4px solid var(--green); font: 12px/1.5 var(--font); pointer-events: none; }
+    #hud::after { content: ""; position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+    body[data-state="playing"] #hud, body[data-state="paused"] #hud { display: block; }
+    #fps { font: bold 20px/1.2 Consolas, monospace; color: var(--gold); }
+    #hud .row2 { display: flex; justify-content: space-between; gap: 14px; color: var(--muted); }
+    #hud .row2 b { color: var(--text); font-weight: 600; }
+
+    #hint { display: none; position: fixed; left: 12px; bottom: 10px; z-index: 5; color: #fff; font-size: 12px; text-shadow: 0 1px 3px #000; pointer-events: none; opacity: 0.9; }
+    body[data-state="playing"] #hint { display: block; }
+
+    /* ---- pause menu ---- */
+    #pause { display: none; position: fixed; inset: 0; z-index: 20; align-items: center; justify-content: center; background: rgba(6, 16, 13, 0.62); }
+    body[data-state="paused"] #pause { display: flex; }
+    .pause-card { width: min(92vw, 380px); padding: 24px 28px; text-align: center; background: var(--panel); border-radius: 14px; border-top: 4px solid var(--green);
+                  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); }
+    .pause-card h1 { margin: 0; letter-spacing: 4px; font-size: 26px; }
+    .pause-card h2 { margin: 2px 0 16px; font-weight: 500; font-size: 15px; color: var(--green-light); letter-spacing: 2px; text-transform: uppercase; }
+    .pause-card .stack { display: grid; gap: 10px; }
+    .pause-card .pbtn { padding: 12px 16px; border-radius: 10px; border: 1px solid var(--line); background: #17302a; color: var(--text); font: 600 16px var(--font); cursor: pointer; }
+    .pause-card .pbtn.main { background: linear-gradient(135deg, #17a577, #0d6e51); border-color: var(--gold); }
+    .pause-card .pbtn:hover { filter: brightness(1.2); }
+    .pause-card .pbtn:active { transform: scale(0.98); }
+    #pauseMsg { margin-top: 10px; font-size: 12px; color: #ff9e80; min-height: 14px; }
+  </style>
+</head>
+<body data-state="lobby">
+  <!-- #gameRoot is the Fullscreen API target: only the game UI goes fullscreen, never overlays injected outside it -->
+  <div id="gameRoot">
+  <canvas id="game"></canvas>
+
+  <!-- performance panel (gameplay) -->
+  <div id="hud">
+    <div id="fps">-- FPS</div>
+    <div class="row2"><span>Limit</span><b><span id="hudLimit">30</span> FPS</b></div>
+    <div class="row2"><span>Graphics</span><b id="hudQuality">Medium</b></div>
+    <div class="row2"><span>State</span><b id="hudState">Idle</b></div>
+    <div class="row2"><span>Draw calls</span><b id="hudCalls">--</b></div>
+  </div>
+  <div id="hint">WASD move · Shift run · Space jump · E interact · H wave · Mouse look · Wheel zoom · F fps · G graphics · Esc menu</div>
+
+  <!-- ================= MAIN LOBBY ================= -->
+  <div id="lobby" class="lobby">
+    <div class="lobby-vignette"></div>
+
+    <!-- left: profile, store + groups, updates banner with the special offer, belt -->
+    <aside class="lobby-left">
+      <div class="left-top">
+        <section class="profile-card" id="profileCard" role="button" tabindex="0" aria-label="Open your profile">
+          <div class="avatar" id="avatar"></div>
+          <div class="profile-info">
+            <div class="name-row">
+              <span class="profile-name" id="profileName">Musafir</span>
+              <button class="edit-btn" id="profileEditBtn" type="button" title="Edit name" aria-label="Edit name"><span class="ico" data-icon="pencil"></span></button>
+            </div>
+            <div class="level-row">
+              <span class="level-badge">LV <b id="profileLevel">1</b></span>
+              <div class="xp-bar" role="progressbar" aria-label="Experience" aria-valuemin="0" aria-valuemax="100" id="xpBar"><div class="xp-fill" id="xpFill"></div></div>
+            </div>
+            <div class="xp-text" id="xpText">0 / 100 XP</div>
+          </div>
+        </section>
+
+        <div class="tile-row">
+          <button class="tile" type="button" data-panel="store"><span class="ico" data-icon="store"></span><b>STORE</b></button>
+          <button class="tile" type="button" data-panel="groups"><span class="ico" data-icon="groups"></span><b>GROUPS</b></button>
+        </div>
+
+        <section class="updates-card" aria-label="Updates">
+          <button class="banner" type="button" data-panel="updates">
+            <span class="banner-art" aria-hidden="true"></span>
+            <span class="banner-text"><small>NEW · UPDATE 03</small><b>Living City</b></span>
+          </button>
+          <button class="offer-strip" type="button" data-panel="gift"><span class="ico" data-icon="gift"></span><b>SPECIAL OFFER</b></button>
+        </section>
+      </div>
+      <button class="inv-btn" type="button" data-panel="inventory"><span class="ico" data-icon="bag"></span><span class="inv-text"><b>BELT</b><small>Inventory</small></span></button>
+    </aside>
+
+    <!-- centre: the character (drag to rotate) -->
+    <div class="lobby-stage" id="stage" aria-label="Your character. Drag left or right to rotate.">
+      <div class="drag-hint" id="dragHint"><span class="ico" data-icon="rotate"></span> Drag to rotate</div>
+    </div>
+
+    <!-- right: currencies + Settings / Mailbox / Friends, friend shortcut, play -->
+    <aside class="lobby-right">
+      <div class="top-right">
+        <div class="currency" aria-label="Currency">
+          <button class="chip" type="button" data-panel="wallet" title="Real Coin"><span class="ico coin" data-icon="coin"></span><b id="coinValue">0</b></button>
+          <button class="chip" type="button" data-panel="wallet" title="Diamond"><span class="ico diamond" data-icon="diamond"></span><b id="diamondValue">0</b></button>
+        </div>
+        <nav class="icon-bar" aria-label="Quick access">
+          <button class="icon-btn" type="button" data-panel="settings" title="Settings" aria-label="Settings"><span class="ico" data-icon="settings"></span></button>
+          <button class="icon-btn" type="button" data-panel="mailbox" title="Mailbox" aria-label="Mailbox"><span class="ico" data-icon="mailbox"></span></button>
+          <button class="icon-btn" type="button" data-panel="friends" title="Friends" aria-label="Friends"><span class="ico" data-icon="friends"></span></button>
+          <button class="icon-btn" id="lobbyFullscreenBtn" type="button" title="Enter fullscreen" aria-label="Enter fullscreen" aria-pressed="false"><span class="ico" data-icon="fullscreen"></span></button>
+        </nav>
+      </div>
+      <div class="lobby-bottom-right">
+        <button class="friend-add" type="button" data-panel="addfriend" title="Add friend" aria-label="Add friend"><span class="ico" data-icon="addfriend"></span></button>
+        <button class="play-btn" id="playBtn" type="button"><span class="play-sun"><span class="ico" data-icon="play"></span></span><span class="play-label">PLAY</span></button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ================= PROFILE (full screen) ================= -->
+  <div id="profileScreen" class="screen hidden" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+    <header class="screen-head">
+      <h2 id="profileTitle">PROFILE</h2>
+      <button class="modal-close" id="profileClose" type="button" aria-label="Close"></button>
+    </header>
+    <div class="screen-body profile-body">
+      <div class="profile-hero">
+        <div class="avatar big" id="profileAvatar"></div>
+        <div class="hero-lines">
+          <div class="hero-name-row">
+            <span class="hero-name" id="profileScreenName">Musafir</span>
+            <button class="opt with-ico" id="profileEditName" type="button"><span class="ico" data-icon="pencil"></span> Edit name</button>
+          </div>
+          <form class="name-edit hidden" id="nameForm" autocomplete="off">
+            <input id="nameInput" type="text" maxlength="16" spellcheck="false" aria-label="Display name" />
+            <button class="opt on" type="submit">Save</button>
+            <button class="opt" type="button" id="nameCancel">Cancel</button>
+            <div class="name-error" id="nameError" role="alert"></div>
+          </form>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat uid-stat">
+          <small>PLAYER UID</small>
+          <div class="uid-row"><b class="uid" id="profileUid">--------</b>
+            <button class="opt with-ico" id="copyUid" type="button"><span class="ico" data-icon="copy"></span> Copy UID</button></div>
+          <em>Saved on this device. A global UID needs an online account (coming later).</em>
+        </div>
+        <div class="stat"><small>LEVEL</small><b class="big-num" id="profileScreenLevel">1</b></div>
+        <div class="stat wide">
+          <small>EXPERIENCE</small>
+          <div class="xp-bar tall"><div class="xp-fill" id="profileScreenXpFill"></div></div>
+          <span id="profileScreenXp">0 / 100 XP</span>
+        </div>
+        <div class="stat wide like-stat">
+          <button class="like-btn" id="likeBtn" type="button" aria-pressed="false"><span class="ico" data-icon="heart"></span> <span id="likeLabel">Like</span></button>
+          <em>Likes are stored only on this device for now. Real likes (one per signed-in player) need an online account.</em>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PAUSE MENU ================= -->
+  <div id="pause">
+    <div class="pause-card">
+      <h1>DESHTA KAR</h1>
+      <h2>Paused</h2>
+      <div class="stack">
+        <button class="pbtn main" id="resumeBtn" type="button">Resume</button>
+        <button class="pbtn" id="pauseSettingsBtn" type="button">Settings</button>
+        <button class="pbtn" id="toLobbyBtn" type="button">Back to Lobby</button>
+      </div>
+      <div id="pauseMsg"></div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL (panels + full-screen settings) ================= -->
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+      <header class="modal-head">
+        <h2 id="modalTitle" data-modal-title></h2>
+        <button class="modal-close" type="button" data-modal-close aria-label="Close"></button>
+      </header>
+      <div class="modal-body">
+        <section class="modal-section hidden" data-panel="generic"></section>
+
+        <section class="modal-section settings hidden" data-panel="settings">
+          <nav class="tabs" role="tablist">
+            <button class="tab on" type="button" role="tab" data-tab="performance">Performance</button>
+            <button class="tab" type="button" role="tab" data-tab="camera">Camera</button>
+            <button class="tab" type="button" role="tab" data-tab="information">Information</button>
+          </nav>
+
+          <div class="tab-pane" data-tabpane="performance">
+            <h3>Performance</h3>
+            <div class="row">
+              <span class="label">FPS limit</span>
+              <button class="opt" type="button" data-fps="30">30 FPS</button>
+              <button class="opt" type="button" data-fps="45">45 FPS</button>
+              <button class="opt" type="button" data-fps="60">60 FPS</button>
+            </div>
+            <div class="row">
+              <span class="label">Graphics quality</span>
+              <button class="opt" type="button" data-quality="low">Low</button>
+              <button class="opt" type="button" data-quality="medium">Medium</button>
+            </div>
+            <p class="hint-text">Low turns off shadows, clouds and the distant skyline and renders at a lower resolution. Phones start on Low.</p>
+            <div class="row" id="fullscreenRow">
+              <span class="label">Fullscreen</span>
+              <button class="opt" type="button" id="fullscreenBtn">Enter fullscreen</button>
+              <span class="hint-text" id="fullscreenNote"></span>
+            </div>
+          </div>
+
+          <div class="tab-pane hidden" data-tabpane="camera">
+            <h3>Camera</h3>
+            <div class="row">
+              <span class="label">Look sensitivity</span>
+              <input id="sensSlider" type="range" />
+              <span class="val" id="sensSliderValue"></span>
+            </div>
+            <div class="row">
+              <span class="label">Camera height</span>
+              <input id="heightSlider" type="range" />
+              <span class="val" id="heightSliderValue"></span>
+            </div>
+            <div class="row">
+              <span class="label">Camera distance</span>
+              <input id="zoomSlider" type="range" />
+              <span class="val" id="zoomSliderValue"></span>
+            </div>
+            <p class="hint-text">Sensitivity applies to the mouse on PC and to the right-side camera area on a phone.</p>
+          </div>
+
+          <div class="tab-pane hidden" data-tabpane="information">
+            <h3>Information</h3>
+            <p class="lead"><b>DESHTA KAR</b> (দেশটা কার) · version <b id="gameVersion"></b></p>
+            <h3>About the game</h3>
+            <p class="lead">An offline-first, low-poly open-world life simulation inspired by Bangladesh. Explore a small Dhaka-style city, enter houses, climb to a balcony and ride a motorcycle. Everything runs in your browser and nothing is sent anywhere.</p>
+            <h3>Controls — PC</h3>
+            <table class="keys">
+              <tr><td><kbd>W A S D</kbd></td><td>Move</td></tr>
+              <tr><td><kbd>Shift</kbd></td><td>Run</td></tr>
+              <tr><td><kbd>Space</kbd></td><td>Jump · handbrake on the bike</td></tr>
+              <tr><td><kbd>Mouse</kbd></td><td>Rotate camera</td></tr>
+              <tr><td><kbd>E</kbd></td><td>Interact: doors, balcony wave, motorcycle, talk to people</td></tr>
+              <tr><td><kbd>H</kbd></td><td>Hand gesture (wave)</td></tr>
+              <tr><td><kbd>Wheel</kbd> <kbd>-</kbd> <kbd>+</kbd></td><td>Camera distance</td></tr>
+              <tr><td><kbd>F</kbd> <kbd>G</kbd></td><td>FPS limit · graphics Low/Medium</td></tr>
+              <tr><td><kbd>Esc</kbd></td><td>Pause</td></tr>
+            </table>
+            <h3>Controls — phone / tablet</h3>
+            <table class="keys">
+              <tr><td>Left stick</td><td>Move</td></tr>
+              <tr><td>Right side, drag</td><td>Rotate camera (works together with the stick)</td></tr>
+              <tr><td>Jump · Run · Wave</td><td>Jump; Run is an on/off toggle; Wave is a hand gesture</td></tr>
+              <tr><td>Interact · Ride</td><td>Appear when a door, balcony, motorcycle or a person is near</td></tr>
+            </table>
+            <p class="hint-text">Testing touch controls on a PC: add <kbd>?touch</kbd> to the address (for example <kbd>localhost:5173/?touch</kbd>).</p>
+          </div>
+
+          <div class="settings-foot">
+            <span class="saved-note">Changes are saved automatically.</span>
+            <button class="opt on" id="saveSettingsBtn" type="button">Save &amp; Close</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="prompt" class="prompt" aria-live="polite"><kbd>E</kbd><span id="promptText"></span></div>
+  <div id="fade" class="fade"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="rotateHint" class="rotate-hint"><span class="ico" data-icon="rotate"></span><b>Please rotate your device</b><small>DESHTA KAR is played in landscape</small></div>
+
+  </div><!-- /#gameRoot -->
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
