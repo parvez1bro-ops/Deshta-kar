@@ -1,0 +1,15 @@
+/* UPDATE 10 — Mailbox (uses the existing modal + tab styles from lobby.css) */
+.mb { display: flex; flex-direction: column; gap: 10px; }
+.mb-body { display: flex; flex-direction: column; gap: 10px; }
+.mb-card { display: grid; gap: 4px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line);
+  background: rgba(255,255,255,.05); }
+.mb-card small { color: var(--gold); font-size: 11px; letter-spacing: 1px; }
+.mb-card span { color: #e4efe9; font-size: 13px; line-height: 1.5; }
+.mb-card .opt { justify-self: start; margin-top: 6px; }
+.mb-card .opt:disabled { opacity: .55; cursor: default; }
+.mb-msg { display: grid; gap: 2px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line);
+  background: rgba(255,255,255,.05); color: var(--text); text-align: left; cursor: pointer; font-family: var(--font); }
+.mb-msg small { color: var(--muted); font-size: 12px; }
+.mb-msg.unread { border-color: var(--gold); background: rgba(244,185,66,.1); }
+.mb-msg.unread b::after { content: ' ●'; color: var(--gold); font-size: 10px; }
+.mb-msg:hover { background: rgba(28,74,58,.6); }
