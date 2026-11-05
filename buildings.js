@@ -234,6 +234,11 @@ class House {
     });
   }
 
+  /** True when (x,z) is inside this house's footprint (with margin). */
+  isInside(x, z, margin = 0.3) {
+    return this.contains(x, z, margin);
+  }
+
   /** Meshes: body + roof (roof toggled when the player is inside). */
   finish(group) {
     const mk = (batch, name, cast) => {
@@ -273,6 +278,7 @@ export function buildTinHouse(ctx, cx, cz, q) {
   h.frontDoor(-1.5, D / 2);
   h.bed(1.6, -1.0); h.table(-1.4, -1.2, 0.9, 0.6); h.chair(-1.4, -0.6);
   h.solid(0.1, PLINTH, -1.7, 0.8, 0.5, 0.5, C.darkWood);                 // trunk
+  h.wardrobe(-2.1, -1.6, PLINTH, true); h.sofa(0.6, 1.2, C.fabric2, PLINTH, 1.4);
   roofOver(h, H, W + 0.8, D + 0.8, 0.95, 0x8f989f, false);               // corrugated tin
   return h;
 }
@@ -291,8 +297,9 @@ export function buildResidentialHouse(ctx, cx, cz, q) {
   h.frontDoor(-2.3, D / 2);
   // living room
   h.sofa(-2.4, -2.5); h.table(-2.4, -0.9, 1.1, 0.7); h.chair(-3.1, 0.0); h.chair(-1.7, 0.0);
+  h.counter(-2.6, 2.6, 1.6, 0.6); h.chair(-1.6, 2.6);
   // bedroom
-  h.bed(2.7, -1.9); h.wardrobe(3.15, 1.8, PLINTH, true); h.table(2.3, 1.5, 0.7, 0.5);
+  h.bed(2.7, -1.9); h.wardrobe(3.15, 1.8, PLINTH, true); h.table(2.3, 1.5, 0.7, 0.5); h.chair(2.3, 0.9);
   roofOver(h, H, W + 0.9, D + 0.9, 1.35, 0xb5523b, true);
   return h;
 }
@@ -316,6 +323,7 @@ export function buildBrickHouse(ctx, cx, cz, q) {
   for (const sx of [-1, 1]) h.solid(sx * (W / 2 - 0.2), PLINTH, D / 2 + 1.55, 0.2, 2.35, 0.2, 0xe8e0cc);
   { const [x, z] = h.toWorld(0, pz); h.roof.box(x, 2.55, z, W + 0.2, 0.15, 1.9, 0x7b4a3a, h.ry); }   // veranda roof
   h.bed(-2.0, -1.5); h.table(1.8, -1.4, 1.0, 0.7); h.chair(1.8, -0.7); h.wardrobe(2.5, -2.3, PLINTH, true); h.sofa(-1.6, 1.4, C.fabric2, PLINTH, 1.5);
+  h.counter(0.2, -2.2, 1.4, 0.6); h.chair(-0.6, -2.2);
   roofOver(h, H, W + 0.8, D + 0.8, 1.2, 0x7b4a3a, true);
   return h;
 }
@@ -368,7 +376,7 @@ export function buildModernHouse(ctx, cx, cz, q) {
 
   // furniture
   h.sofa(1.2, -2.7); h.table(2.6, -0.4, 1.3, 0.8); h.chair(2.0, 0.5); h.chair(3.2, 0.5);
-  h.counter(2.6, -3.5, 3.4, 0.7);
+  h.counter(2.6, -3.5, 3.4, 0.7); h.chair(1.4, -3.5); h.chair(3.8, -3.5);
   h.bed(2.9, -2.4, true, F); h.wardrobe(-1.6, -3.55, F, true); h.table(-1.2, 2.2, 1.2, 0.6, F); h.chair(-1.2, 1.5, F);
   h.sofa(1.3, 0.8, C.fabric2, F, 1.6);
 
@@ -439,6 +447,7 @@ export function buildEnterables(ctx, anchors = {}) {
   }
 
   const update = (dt, player) => {
+    let anyInside = false;
     for (const h of houses) {
       for (const door of h.doors) {
         const target = door.open ? 1 : 0;
@@ -449,9 +458,14 @@ export function buildEnterables(ctx, anchors = {}) {
       }
       if (h.roofMesh) {
         const inside = h.contains(player.x, player.z, 0.25) && player.y < 5.5;
+        if (inside) anyInside = true;
         if (h.roofMesh.visible === inside) h.roofMesh.visible = !inside;
       }
     }
+    // UPDATE 07: tell the camera we are indoors so it stays close and low.
+    // Only the roof of the house we are in is hidden (selective ceiling hiding);
+    // every other building stays fully visible.
+    if (ctx.camera) ctx.camera.indoor = anyInside;
   };
 
   const dispose = () => {
