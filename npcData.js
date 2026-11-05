@@ -15,12 +15,12 @@
 /* Population presets (used when settings.js has no `npc` entry)        */
 /* ------------------------------------------------------------------ */
 export const DEFAULT_POPULATION = {
-  low: { min: 4, start: 6, max: 8, cull: 42 },
-  medium: { min: 8, start: 12, max: 16, cull: 62 },
-  high: { min: 12, start: 16, max: 22, cull: 80 },
+  low: { min: 6, start: 10, max: 14, cull: 46 },
+  medium: { min: 12, start: 18, max: 24, cull: 68 },
+  high: { min: 16, start: 22, max: 28, cull: 85 },
 };
 /** Number of identities generated. Everything above the active count just sleeps (no meshes drawn, no updates). */
-export const NPC_POOL_SIZE = 22;
+export const NPC_POOL_SIZE = 28;
 
 /* ------------------------------------------------------------------ */
 /* Names                                                                */
@@ -102,6 +102,12 @@ export const SLOTS = [
   { persona: 'youth', g: 'm', behavior: 'walker', hurry: 0.2 },                        // 19
   { persona: 'student_f2', g: 'f', behavior: 'walker', hurry: 0.15 },                  // 20
   { persona: 'roadside', g: 'm', behavior: 'worker', home: 'kerb_a' },                 // 21
+  { persona: 'office', g: 'f', behavior: 'walker' },                                  // 22
+  { persona: 'teacher', g: 'f', behavior: 'walker' },                                 // 23
+  { persona: 'labourer', g: 'm', behavior: 'chatter', pair: 25 },                     // 24
+  { persona: 'youth', g: 'm', behavior: 'chatter', pair: 24 },                        // 25
+  { persona: 'housewife', g: 'f', behavior: 'walker' },                               // 26
+  { persona: 'student_m', g: 'm', behavior: 'walker' },                               // 27
 ];
 
 /* ------------------------------------------------------------------ */
